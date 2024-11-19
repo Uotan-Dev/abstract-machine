@@ -31,4 +31,31 @@ enum { MODE_U, MODE_S, MODE_M = 3 };
 #define MSTATUS_UXL  0
 #endif
 
+typedef union __attribute__((packed)) {
+  struct { uintptr_t PPN : 22, ASID : 9, MODE : 1; } dec_SATP;
+  struct { uintptr_t UIE: 1, SIE: 1, WPRI: 1, MIE: 1, UPIE: 1, SPIE: 1, WPRI2: 1, MPIE: 1,
+                  SPP: 1, WPRI3: 2, MPP: 2, FS: 2, XS: 2, MPRV: 1, SUM: 1, MXR: 1, TVM: 1,
+                  TW: 1, TSR: 1, WPRI4: 8, SD: 1; } dec_MSTATUS;
+  struct { uintptr_t VALUE : 32; } dec_MTVEC;
+  struct { uintptr_t VALUE : 32 ; } dec_MEPC;
+  struct { uintptr_t EXCEPTION : 31, INTERRUPT : 1; } dec_MCAUSE;
+  uintptr_t val;
+} SR_Decode;
+
+typedef union __attribute__((packed)) {
+  struct { uintptr_t offset : 12, VPN_0 : 10, VPN_1 : 10; };
+  uintptr_t addr;
+} VA_Decode;
+
+typedef union __attribute__((packed)) {
+  struct { uintptr_t offset : 12, PPN : 20; }; // Not 22 for now
+  uintptr_t addr;
+} PA_Decode;
+
+// RV32 Sv32 PTE
+typedef union __attribute__((packed)) {
+  struct { uintptr_t V : 1, R : 1, W : 1, X : 1, U : 1, G : 1, A : 1, D : 1, RSW : 2, PPN : 22; };
+  uintptr_t val;
+} PTE_Decode;
+
 #endif
