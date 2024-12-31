@@ -27,7 +27,7 @@ image: image-dep
 	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
 
 run: insert-arg
-	$(MAKE) -C $(SEMU_HOME) ISA=$(ISA) run ARGS="$(SEMUFLAGS)" IMG=$(IMAGE).bin
+	$(MAKE) -C $(SEMU_HOME) ISA=$(ISA) run ARGS="$(SEMUFLAGS) --batch" IMG=$(IMAGE).bin
 
 gdb: insert-arg
 	$(MAKE) -C $(SEMU_HOME) ISA=$(ISA) gdb ARGS="$(SEMUFLAGS)" IMG=$(IMAGE).bin
