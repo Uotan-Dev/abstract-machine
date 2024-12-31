@@ -1,6 +1,8 @@
 #ifndef ARCH_H__
 #define ARCH_H__
 
+#include <stdint.h>
+
 #ifdef __riscv_e
 #define NR_REGS 16
 #else
@@ -8,9 +10,12 @@
 #endif
 
 struct Context {
-  // TODO: fix the order of these members to match trap.S
-  uintptr_t mepc, mcause, gpr[NR_REGS], mstatus;
-  void *pdir;
+  // Matches trap.S
+  union {
+    uintptr_t gpr[NR_REGS];
+    void *pdir; // Share with gpr[0] for riscv/mips
+  };
+  uintptr_t mcause, mstatus, mepc;
 };
 
 #ifdef __riscv_e
