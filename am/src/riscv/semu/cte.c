@@ -8,7 +8,13 @@ Context* __am_irq_handle(Context *c) {
   if (user_handler) {
     Event ev = {0};
     switch (c->mcause) {
-      default: ev.event = EVENT_ERROR; break;
+      case 0xb: // mcause[XLEN-1] = 0, mcause[XLEN-2:0] = 11
+        ev.event = c->GPR1 == (uintptr_t)(-1) ? EVENT_YIELD : EVENT_SYSCALL;
+        c->mepc += 4; // Add 4 for riscv and mips
+        break;
+      default:
+        ev.event = EVENT_ERROR;
+        break;
     }
 
     c = user_handler(ev, c);
