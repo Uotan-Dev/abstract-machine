@@ -17,7 +17,7 @@ void __am_timer_init() {
 }
 
 void __am_timer_uptime(AM_TIMER_UPTIME_T *uptime) {
-  uptime->us = (uint64_t)inl(RTC_ADDR + 4) << 32 | inl(RTC_ADDR);
+  uptime->us = (uint64_t)inl(UPTIME_HI_ADDR) << 32 | inl(UPTIME_LO_ADDR);
 }
 
 void __am_timer_rtc(AM_TIMER_RTC_T *rtc) {
@@ -27,4 +27,7 @@ void __am_timer_rtc(AM_TIMER_RTC_T *rtc) {
   rtc->day    = inl(RTC_MDAY_ADDR);
   rtc->month  = inl(RTC_MON_ADDR);
   rtc->year   = inl(RTC_YEAR_ADDR);
+
+  rtc->epoch_sec  = (uint64_t)inl(EPOCH_SEC_HI) << 32 | inl(EPOCH_SEC_LO);
+  rtc->epoch_usec = inl(EPOCH_USEC);
 }
