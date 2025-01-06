@@ -15,7 +15,7 @@ struct Context {
     uintptr_t gpr[NR_REGS];
     void *pdir; // Share with gpr[0] for riscv/mips
   };
-  uintptr_t mcause, mstatus, mepc;
+  uintptr_t mcause, mstatus, mepc, mscratch;
 };
 
 #ifdef __riscv_e
