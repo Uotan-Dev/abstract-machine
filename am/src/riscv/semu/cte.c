@@ -53,9 +53,9 @@ Context *kcontext(Area kstack, void (*entry)(void *), void *arg) {
   ret->mepc = (uintptr_t)entry;
   ret->pdir = NULL;
 #if __riscv_xlen == 64
-  ret->mstatus = 0xa00001800;
+  ret->mstatus = 0xa00001880;
 #else
-  ret->mstatus = 0x1800;
+  ret->mstatus = 0x1880;
 #endif
   return ret;
 }
