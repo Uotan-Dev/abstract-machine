@@ -44,6 +44,7 @@ Context *kcontext(Area kstack, void (*entry)(void *), void *arg) {
   Context *ret = (Context *)kstack.end - 1;
   ret->GPRx = (uintptr_t)arg; // a0
   ret->mepc = (uintptr_t)entry;
+  ret->pdir = NULL;
 #if __riscv_xlen == 64
   ret->mstatus = 0xa00001800;
 #else
