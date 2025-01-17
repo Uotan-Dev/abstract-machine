@@ -43,7 +43,7 @@ f(30) f(31)
 __am_asm_trap:
   csrrw sp, mscratch, sp  # atomically exchange sp and mscratch
   bnez sp, save_context   # take the branch if we trapped from user
-  csrr sp, mscratch       # if we trapped from kernel, restore the original sp
+  csrrw sp, mscratch, sp  # if we trapped from kernel, restore the original sp
 
 save_context:
   addi sp, sp, -CONTEXT_SIZE
@@ -85,7 +85,7 @@ save_context:
 
   csrrw sp, mscratch, sp
   bnez sp, return_from_trap
-  csrr sp, mscratch
+  csrrw sp, mscratch, sp
 
 return_from_trap:
   mret
