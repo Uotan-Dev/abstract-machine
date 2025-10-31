@@ -27,9 +27,9 @@ image: image-dep
 	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
 
 run: insert-arg
-	$(MAKE) -C $(UEMU_HOME) ISA=$(ISA) run ARGS="$(UEMUFLAGS)" IMG=$(IMAGE).bin
+	uemu $(IMAGE).bin
 
 gdb: insert-arg
-	$(MAKE) -C $(UEMU_HOME) ISA=$(ISA) gdb ARGS="$(UEMUFLAGS)" IMG=$(IMAGE).bin
+	uemu --gdb $(IMAGE).bin
 
 .PHONY: insert-arg
