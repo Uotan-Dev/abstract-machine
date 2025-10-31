@@ -2,8 +2,8 @@
 #include <uemu.h>
 #include <string.h>
 
-#define FB_WIDTH 1024
-#define FB_HEIGHT 768
+#define FB_WIDTH 400
+#define FB_HEIGHT 300
 
 void __am_gpu_init() {
 }

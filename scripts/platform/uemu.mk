@@ -27,9 +27,9 @@ image: image-dep
 	@$(OBJCOPY) -S --set-section-flags .bss=alloc,contents -O binary $(IMAGE).elf $(IMAGE).bin
 
 run: insert-arg
-	uemu $(IMAGE).bin
+	uemu --small-screen $(IMAGE).bin
 
 gdb: insert-arg
-	uemu --gdb $(IMAGE).bin
+	uemu --small-screen --gdb $(IMAGE).bin
 
 .PHONY: insert-arg

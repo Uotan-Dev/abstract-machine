@@ -55,27 +55,10 @@ static const uint8_t ascii_keymap[128] = {
   ['&'] = AM_KEY_7, ['*'] = AM_KEY_8, ['('] = AM_KEY_9, [')'] = AM_KEY_0,
 };
 
-static struct {
-  bool has_key;
-  int keycode;
-  bool sent_press;
-} key_state = {false, AM_KEY_NONE, false};
+#define MAX_KEYS 256
+static bool key_pressed[MAX_KEYS] = {false};
 
 void __am_input_keybrd(AM_INPUT_KEYBRD_T *kbd) {
-  if (key_state.has_key) {
-    if (!key_state.sent_press) {
-      kbd->keydown = true;
-      kbd->keycode = key_state.keycode;
-      key_state.sent_press = true;
-    } else {
-      kbd->keydown = false;
-      kbd->keycode = key_state.keycode;
-      key_state.has_key = false;
-      key_state.sent_press = false;
-    }
-    return;
-  }
-  
   unsigned int lsr = inb(SERIAL_MMIO + LSR);
   if (lsr & LSR_DR) {
     unsigned char ch = inb(SERIAL_MMIO + RBR);
@@ -83,13 +66,10 @@ void __am_input_keybrd(AM_INPUT_KEYBRD_T *kbd) {
     int keycode = (ch < 128) ? ascii_keymap[ch] : AM_KEY_NONE;
     
     if (keycode != AM_KEY_NONE) {
-      key_state.has_key = true;
-      key_state.keycode = keycode;
-      key_state.sent_press = false;
+      key_pressed[keycode] = !key_pressed[keycode];
       
-      kbd->keydown = true;
       kbd->keycode = keycode;
-      key_state.sent_press = true;
+      kbd->keydown = key_pressed[keycode];
       return;
     }
   }
