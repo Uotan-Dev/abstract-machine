@@ -1,83 +1,74 @@
 #include <am.h>
 #include <uemu.h>
 
-#define SERIAL_MMIO 0x10000000
-#define RBR       0x00  // Receive Buffer Register
-#define LSR       0x05  // Line Status Register
-#define LSR_DR    0x01  // Data Ready bit
+#include "input-event-codes.h"
 
-#define KEYDOWN_MASK 0x8000
+#define KEY_ESCAPE KEY_ESC
+#define KEY_EQUALS KEY_EQUAL
+#define KEY_LEFTBRACKET KEY_LEFTBRACE
+#define KEY_RIGHTBRACKET KEY_RIGHTBRACE
+#define KEY_RETURN KEY_ENTER
+#define KEY_LSHIFT KEY_LEFTSHIFT
+#define KEY_RSHIFT KEY_RIGHTSHIFT
+#define KEY_PERIOD KEY_DOT
+#define KEY_LCTRL KEY_LEFTCTRL
+#define KEY_RCTRL KEY_RIGHTCTRL
+#define KEY_APPLICATION KEY_APPSELECT
+#define KEY_LALT KEY_LEFTALT
+#define KEY_RALT KEY_RIGHTALT
 
-static const uint8_t ascii_keymap[128] = {
-  ['\n'] = AM_KEY_RETURN,
-  ['\r'] = AM_KEY_RETURN,
-  ['\t'] = AM_KEY_TAB,
-  [27]   = AM_KEY_ESCAPE,
-  [8]    = AM_KEY_BACKSPACE,
-  [127]  = AM_KEY_DELETE,
-  
-  [' ']  = AM_KEY_SPACE,
-  
-  ['0'] = AM_KEY_0, ['1'] = AM_KEY_1, ['2'] = AM_KEY_2, ['3'] = AM_KEY_3,
-  ['4'] = AM_KEY_4, ['5'] = AM_KEY_5, ['6'] = AM_KEY_6, ['7'] = AM_KEY_7,
-  ['8'] = AM_KEY_8, ['9'] = AM_KEY_9,
-  
-  ['a'] = AM_KEY_A, ['b'] = AM_KEY_B, ['c'] = AM_KEY_C, ['d'] = AM_KEY_D,
-  ['e'] = AM_KEY_E, ['f'] = AM_KEY_F, ['g'] = AM_KEY_G, ['h'] = AM_KEY_H,
-  ['i'] = AM_KEY_I, ['j'] = AM_KEY_J, ['k'] = AM_KEY_K, ['l'] = AM_KEY_L,
-  ['m'] = AM_KEY_M, ['n'] = AM_KEY_N, ['o'] = AM_KEY_O, ['p'] = AM_KEY_P,
-  ['q'] = AM_KEY_Q, ['r'] = AM_KEY_R, ['s'] = AM_KEY_S, ['t'] = AM_KEY_T,
-  ['u'] = AM_KEY_U, ['v'] = AM_KEY_V, ['w'] = AM_KEY_W, ['x'] = AM_KEY_X,
-  ['y'] = AM_KEY_Y, ['z'] = AM_KEY_Z,
-  
-  ['A'] = AM_KEY_A, ['B'] = AM_KEY_B, ['C'] = AM_KEY_C, ['D'] = AM_KEY_D,
-  ['E'] = AM_KEY_E, ['F'] = AM_KEY_F, ['G'] = AM_KEY_G, ['H'] = AM_KEY_H,
-  ['I'] = AM_KEY_I, ['J'] = AM_KEY_J, ['K'] = AM_KEY_K, ['L'] = AM_KEY_L,
-  ['M'] = AM_KEY_M, ['N'] = AM_KEY_N, ['O'] = AM_KEY_O, ['P'] = AM_KEY_P,
-  ['Q'] = AM_KEY_Q, ['R'] = AM_KEY_R, ['S'] = AM_KEY_S, ['T'] = AM_KEY_T,
-  ['U'] = AM_KEY_U, ['V'] = AM_KEY_V, ['W'] = AM_KEY_W, ['X'] = AM_KEY_X,
-  ['Y'] = AM_KEY_Y, ['Z'] = AM_KEY_Z,
-  
-  ['-']  = AM_KEY_MINUS,      ['_']  = AM_KEY_MINUS,
-  ['=']  = AM_KEY_EQUALS,     ['+']  = AM_KEY_EQUALS,
-  ['[']  = AM_KEY_LEFTBRACKET,  ['{']  = AM_KEY_LEFTBRACKET,
-  [']']  = AM_KEY_RIGHTBRACKET, ['}']  = AM_KEY_RIGHTBRACKET,
-  [';']  = AM_KEY_SEMICOLON,  [':']  = AM_KEY_SEMICOLON,
-  ['\''] = AM_KEY_APOSTROPHE, ['"']  = AM_KEY_APOSTROPHE,
-  [',']  = AM_KEY_COMMA,      ['<']  = AM_KEY_COMMA,
-  ['.']  = AM_KEY_PERIOD,     ['>']  = AM_KEY_PERIOD,
-  ['/']  = AM_KEY_SLASH,      ['?']  = AM_KEY_SLASH,
-  ['\\'] = AM_KEY_BACKSLASH,  ['|']  = AM_KEY_BACKSLASH,
-  ['`']  = AM_KEY_GRAVE,      ['~']  = AM_KEY_GRAVE,
-  
-  ['!'] = AM_KEY_1, ['@'] = AM_KEY_2, ['#'] = AM_KEY_3,
-  ['$'] = AM_KEY_4, ['%'] = AM_KEY_5, ['^'] = AM_KEY_6,
-  ['&'] = AM_KEY_7, ['*'] = AM_KEY_8, ['('] = AM_KEY_9, [')'] = AM_KEY_0,
+#define GOLDFISH_EVENTS_START 0x10002000
+#define GOLDFISH_EVENTS_SIZE 0x1000
+
+enum {
+    REG_READ = 0x00,
+    REG_SET_PAGE = 0x00,
+    REG_LEN = 0x04,
+    REG_DATA = 0x08,
+    PAGE_NAME = 0x00000,
+    PAGE_EVBITS = 0x10000,
+    PAGE_ABSDATA = 0x20000 | EV_ABS,
 };
 
-#define MAX_KEYS 256
-static bool key_pressed[MAX_KEYS] = {false};
+enum {
+    STATE_INIT = 0, /* The device is initialized */
+    STATE_BUFFERED, /* Events have been buffered, but no IRQ raised yet */
+    STATE_LIVE      /* Events can be sent directly to the kernel */
+};
+
+#define macro(name) [KEY_##name] = AM_KEY_##name,
+
+static const uint32_t keycode_linux_to_am[] = {
+  AM_KEYS(macro)
+};
+
+#undef macro
 
 void __am_input_keybrd(AM_INPUT_KEYBRD_T *kbd) {
-  unsigned int lsr = inb(SERIAL_MMIO + LSR);
-  if (lsr & LSR_DR) {
-    unsigned char ch = inb(SERIAL_MMIO + RBR);
-    
-    int keycode = (ch < 128) ? ascii_keymap[ch] : AM_KEY_NONE;
-    
-    if (keycode != AM_KEY_NONE) {
-      key_pressed[keycode] = !key_pressed[keycode];
-      
-      kbd->keycode = keycode;
-      kbd->keydown = key_pressed[keycode];
-      return;
-    }
+  uint32_t type = inl(GOLDFISH_EVENTS_START + REG_READ);
+  while (type && type != EV_KEY)
+    type = inl(GOLDFISH_EVENTS_START + REG_READ);
+  if (type == 0) {
+    kbd->keycode = AM_KEY_NONE;
+    kbd->keydown = false;
+    return;
   }
-  
-  kbd->keydown = false;
-  kbd->keycode = AM_KEY_NONE;
+  uint32_t code = inl(GOLDFISH_EVENTS_START + REG_READ);
+  if (code == 0) {
+    kbd->keycode = AM_KEY_NONE;
+    kbd->keydown = false;
+    return;
+  }
+  uint32_t value = inl(GOLDFISH_EVENTS_START + REG_READ);
+  kbd->keycode = code < sizeof(keycode_linux_to_am) ? keycode_linux_to_am[code] : AM_KEY_NONE; // needs to translate to am keycode
+  kbd->keydown = value;
 }
 
 void __am_input_config(AM_INPUT_CONFIG_T *cfg) {
   cfg->present = true;
+}
+
+void __am_input_init() {
+  outl(GOLDFISH_EVENTS_START + REG_SET_PAGE, PAGE_ABSDATA);
+  inl(GOLDFISH_EVENTS_START + REG_LEN);
 }
